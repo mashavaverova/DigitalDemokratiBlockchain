@@ -1,19 +1,48 @@
 # PollHelpers
 **Inherits:**
-[SharedErrors](/src/SharedErrors.sol/contract.SharedErrors.md)
+[SharedErrors](/src/SharedErrors.sol/contract.SharedErrors.md), Ownable
 
-**Author:**
-@EllenLng, @KristofferGW
+This contract provides helper functions and utilities for managing polls, including poll creation,
+validation, and voting score checks. It defines the structure and essential details of a poll, such as
+voting and proposal phases, and stores each poll's settings.
 
-Audited by @MashaVaverova
-
-*Provides utility functions to manage and interact with polls, including creating, voting, and ensuring compliance with poll phases.*
+*This contract is designed to be inherited by other contracts that require poll management functionality.
+It includes modular validation functions to ensure that poll phases and voting scores meet specified criteria.
+Inherits:
+- `Ownable`: Provides authorization control for functions restricted to the contract owner.
+- `SharedErrors`: Includes custom error handling for reusability across multiple contracts.
+Features:
+- **Poll Creation**: Allows the owner to create new polls with specified parameters.
+- **Voting Validation**: Provides functions to check if a poll is in the voting phase and if a given score is valid.
+- **Delegate Voting Tracking**: Tracks delegate voting activity within each poll.
+- **Custom Error Handling**: Uses custom errors to reduce gas costs for failed transactions.
+State Variables:
+- `metaVoting`: The address of the MetaVoting contract authorized to manage specific voting operations.
+- `pollCount`: The total number of polls created.
+Mappings:
+- `polls`: Maps each poll ID to its respective `Poll` structure.
+- `pollSettings`: Maps each poll ID to its `PollSettings`, defining poll configuration.
+- `votersForPoll`: Tracks addresses that have voted in specific polls.
+- `delegateVotersForPoll`: Tracks addresses that have voted as delegates in specific polls.
+- `userVotes`: Stores individual user votes for each proposal within each poll.
+Events:
+- `PollCreated`: Emitted when a new poll is created, recording the poll ID, title, and on-chain storage preference.
+- `DelegateVoteCast`: Emitted when a delegate casts a vote, recording the delegate address and poll ID.
+Requirements:
+- Only the contract owner can set the MetaVoting address and create polls.
+- Polls must be validated for existence and active voting phases before any voting activity.
+- Score values must be within defined limits to prevent invalid votes.*
 
 
 ## State Variables
-### polls
-Mapping from poll ID to Poll structure.
+### metaVoting
 
+```solidity
+address public metaVoting;
+```
+
+
+### polls
 
 ```solidity
 mapping(uint256 => Poll) public polls;
@@ -21,8 +50,6 @@ mapping(uint256 => Poll) public polls;
 
 
 ### votersForPoll
-Mapping from poll ID to a mapping of addresses representing voters for that poll.
-
 
 ```solidity
 mapping(uint256 => mapping(address => bool)) internal votersForPoll;
@@ -30,8 +57,6 @@ mapping(uint256 => mapping(address => bool)) internal votersForPoll;
 
 
 ### delegateVotersForPoll
-Mapping from poll ID to a mapping of addresses representing delegate voters for that poll.
-
 
 ```solidity
 mapping(uint256 => mapping(address => bool)) internal delegateVotersForPoll;
@@ -39,35 +64,87 @@ mapping(uint256 => mapping(address => bool)) internal delegateVotersForPoll;
 
 
 ### pollCount
-Tracks the total number of polls created.
-
 
 ```solidity
 uint256 public pollCount = 0;
 ```
 
 
+### pollSettings
+
+```solidity
+mapping(uint256 => PollSettings) public pollSettings;
+```
+
+
+### userVotes
+
+```solidity
+mapping(uint256 => mapping(address => mapping(uint256 => uint256))) public userVotes;
+```
+
+
 ## Functions
-### controlProposalEndDate
+### setMetaVoting
 
-Ensures that the proposal phase is still open for the given poll.
+Sets the address of the MetaVoting contract.
 
-*Reverts if the proposal phase has ended.*
+*This function is restricted to the contract owner. It assigns the `_metaVoting`
+address to the `metaVoting` state variable, allowing interaction with an
+external MetaVoting contract for enhanced voting operations.*
 
 
 ```solidity
-function controlProposalEndDate(uint256 _pollId) internal view;
+function setMetaVoting(address _metaVoting) external onlyOwner;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`_pollId`|`uint256`|The ID of the poll to check.|
+|`_metaVoting`|`address`|The address of the MetaVoting contract to be set. Requirements: - Caller must be the contract owner.|
+
+
+### createPoll
+
+Creates a new poll with specified details and settings.
+
+*This function can only be called by the contract owner. It sets up the structure
+and settings of the poll, including the poll phases and score restrictions.*
+
+
+```solidity
+function createPoll(
+    string memory _title,
+    string memory _tag,
+    uint256 _group,
+    uint256 _pollStartDate,
+    uint256 _proposalEndDate,
+    uint256 _votingStartDate,
+    uint256 _delegateEndDate,
+    uint256 _endDate,
+    uint8 _maxVoteScore,
+    bool _storeOnEthereum
+) external onlyOwner;
+```
+**Parameters**
+
+|Name|Type|Description|
+|----|----|-----------|
+|`_title`|`string`|The title of the poll.|
+|`_tag`|`string`|A tag categorizing the poll.|
+|`_group`|`uint256`|The ID of the group associated with the poll.|
+|`_pollStartDate`|`uint256`|The start date of the poll (timestamp in seconds).|
+|`_proposalEndDate`|`uint256`|The end date for submitting proposals (timestamp in seconds).|
+|`_votingStartDate`|`uint256`|The start date for voting in the poll (timestamp in seconds).|
+|`_delegateEndDate`|`uint256`|The end date for delegating votes (timestamp in seconds).|
+|`_endDate`|`uint256`|The end date for the poll (timestamp in seconds).|
+|`_maxVoteScore`|`uint8`|The maximum allowable score for votes in this poll.|
+|`_storeOnEthereum`|`bool`|Boolean flag indicating if poll results will be stored on Ethereum. Requirements: - `_maxVoteScore` must be within the allowable range (checked by `requireMaxVoteScoreWithinRange`). - Only the contract owner can create a poll. Emits: - `PollCreated`: Emitted upon successful poll creation, logging the poll ID, title, and whether the results will be stored on Ethereum.|
 
 
 ### getPoll
 
-Returns the details of a specific poll by ID.
+Retrieves the details of a specified poll.
 
 
 ```solidity
@@ -83,31 +160,12 @@ function getPoll(uint256 _pollId) external view returns (Poll memory);
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`Poll`|Poll The Poll structure containing the poll details.|
-
-
-### isVotingOpen
-
-Ensures that the voting phase is open for the given poll.
-
-*Reverts if the voting phase is not currently open.*
-
-
-```solidity
-function isVotingOpen(uint256 _pollId) internal view;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`_pollId`|`uint256`|The ID of the poll to check.|
+|`<none>`|`Poll`|A `Poll` structure containing the details and settings of the specified poll. Requirements: - The poll with `_pollId` must exist. Reverts: - `PH_PollDoesNotExist` if the poll with the specified `_pollId` does not exist.|
 
 
 ### requirePollToExist
 
-Ensures that the poll exists.
-
-*Reverts if the poll does not exist.*
+*Ensures that a poll with the specified ID exists.*
 
 
 ```solidity
@@ -117,47 +175,43 @@ function requirePollToExist(uint256 _pollId) internal view;
 
 |Name|Type|Description|
 |----|----|-----------|
-|`_pollId`|`uint256`|The ID of the poll to check.|
+|`_pollId`|`uint256`|The ID of the poll to check. Requirements: - `_pollId` must be greater than zero and less than or equal to the current `pollCount`. Reverts: - `PH_PollDoesNotExist` if `_pollId` is zero or exceeds the number of existing polls.|
 
 
 ### requireMaxVoteScoreWithinRange
 
-Ensures that the maximum vote score is within the allowed range.
-
-*Reverts if the max vote score is greater than 100.*
+*Validates that a given vote score is within the allowable range.*
 
 
 ```solidity
-function requireMaxVoteScoreWithinRange(uint8 _maxVoteScore) internal pure;
+function requireMaxVoteScoreWithinRange(uint8 score) internal pure;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`_maxVoteScore`|`uint8`|The maximum vote score to validate.|
+|`score`|`uint8`|The score to validate. Requirements: - `score` must be 100 or less. Reverts: - `PH_MaxVoteScoreOutOfRange` if `score` exceeds 100.|
 
 
 ### requireVoterScoreWithinRange
 
-Ensures that the voter's score is within the allowed range for the poll.
-
-*Reverts if the vote score exceeds the poll's maximum vote score.*
+*Ensures that the given vote `score` does not exceed the maximum allowed score for the specified poll.*
 
 
 ```solidity
-function requireVoterScoreWithinRange(uint8 _score, uint256 _pollId) internal view;
+function requireVoterScoreWithinRange(uint8 score, uint256 pollId) internal view;
 ```
 **Parameters**
 
 |Name|Type|Description|
 |----|----|-----------|
-|`_score`|`uint8`|The score to validate.|
-|`_pollId`|`uint256`|The ID of the poll to check the score against.|
+|`score`|`uint8`|The vote score to validate.|
+|`pollId`|`uint256`|The ID of the poll for which the score is being validated. Requirements: - `score` must be less than or equal to the maximum vote score allowed in the poll settings. Reverts: - `PH_VoteScoreExceedsMax` if `score` is greater than the poll's defined maximum score.|
 
 
 ### hasVoted
 
-Checks whether the caller has already voted in the specified poll.
+*Checks if the caller has already voted in a specific poll.*
 
 
 ```solidity
@@ -173,16 +227,16 @@ function hasVoted(uint256 _pollId) internal view returns (bool voted);
 
 |Name|Type|Description|
 |----|----|-----------|
-|`voted`|`bool`|True if the caller has voted, false otherwise.|
+|`voted`|`bool`|`true` if the caller has voted in the poll, otherwise `false`.|
 
 
-### hasVotedAsDelegate
+### isVotingOpen
 
-Checks whether the caller has voted as a delegate in the specified poll.
+*Checks if the voting phase is currently open for a specific poll.*
 
 
 ```solidity
-function hasVotedAsDelegate(uint256 _pollId) internal view returns (bool voted);
+function isVotingOpen(uint256 _pollId) internal view returns (bool);
 ```
 **Parameters**
 
@@ -194,105 +248,35 @@ function hasVotedAsDelegate(uint256 _pollId) internal view returns (bool voted);
 
 |Name|Type|Description|
 |----|----|-----------|
-|`voted`|`bool`|True if the caller has voted as a delegate, false otherwise.|
+|`<none>`|`bool`|`true` if the current timestamp is within the voting period, otherwise `false`. Requirements: - The poll's voting start date must be in the past, and the end date must be in the future.|
 
 
-### castVote
-
-Adds the caller as a voter for a specific poll.
-
-
-```solidity
-function castVote(uint256 _pollId) external;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`_pollId`|`uint256`|The ID of the poll where the caller is voting.|
-
-
-### castDelegateVote
-
-Adds the caller as a delegate voter for a specific poll.
+### publicRequireMaxVoteScoreWithinRange
 
 
 ```solidity
-function castDelegateVote(uint256 _pollId) external;
+function publicRequireMaxVoteScoreWithinRange(uint8 score) external pure;
 ```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`_pollId`|`uint256`|The ID of the poll where the caller votes as a delegate.|
-
 
 ### publicIsVotingOpen
-
-Exposes the isVotingOpen function to the public for checking voting status.
 
 
 ```solidity
 function publicIsVotingOpen(uint256 _pollId) external view;
 ```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`_pollId`|`uint256`|The ID of the poll to check voting status.|
-
-
-### publicControlProposalEndDate
-
-Exposes the controlProposalEndDate function to the public for checking proposal phase status.
-
-
-```solidity
-function publicControlProposalEndDate(uint256 _pollId) external view;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`_pollId`|`uint256`|The ID of the poll to check proposal phase.|
-
-
-### publicRequireMaxVoteScoreWithinRange
-
-Exposes the requireMaxVoteScoreWithinRange function to the public for validating maximum vote score.
-
-
-```solidity
-function publicRequireMaxVoteScoreWithinRange(uint8 _maxVoteScore) external pure;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`_maxVoteScore`|`uint8`|The maximum vote score to validate.|
-
 
 ### publicRequireVoterScoreWithinRange
 
-Exposes the requireVoterScoreWithinRange function to the public for validating voter score.
-
 
 ```solidity
-function publicRequireVoterScoreWithinRange(uint8 _score, uint256 _pollId) external view;
+function publicRequireVoterScoreWithinRange(uint8 score, uint256 pollId) external view;
 ```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`_score`|`uint8`|The score to validate.|
-|`_pollId`|`uint256`|The ID of the poll to check the score against.|
-
 
 ## Events
-### VoteCast
+### PollCreated
 
 ```solidity
-event VoteCast(address indexed voter, uint256 indexed pollId);
+event PollCreated(uint256 indexed pollId, string title, bool storeOnEthereum);
 ```
 
 ### DelegateVoteCast
@@ -303,8 +287,6 @@ event DelegateVoteCast(address indexed delegateVoter, uint256 indexed pollId);
 
 ## Errors
 ### PH_ProposalPhaseEnded
-Custom Errors
-
 
 ```solidity
 error PH_ProposalPhaseEnded(uint256 pollId, uint256 proposalEndDate, uint256 currentTimestamp);
@@ -336,11 +318,20 @@ error PH_VoteScoreExceedsMax(uint8 providedScore, uint8 maxScore);
 
 ## Structs
 ### Poll
-*Struct representing a poll.*
-
 
 ```solidity
 struct Poll {
+    PollDetails details;
+    PollSettings settings;
+    uint256 pollId;
+    uint256 proposalCount;
+}
+```
+
+### PollDetails
+
+```solidity
+struct PollDetails {
     string title;
     string tag;
     uint256 group;
@@ -349,9 +340,17 @@ struct Poll {
     uint256 votingStartDate;
     uint256 delegateEndDate;
     uint256 endDate;
+}
+```
+
+### PollSettings
+
+```solidity
+struct PollSettings {
     uint8 maxVoteScore;
-    uint256 pollId;
-    uint256 proposalCount;
+    bool storeOnEthereum;
+    bool finalized;
+    bytes32 resultHash;
 }
 ```
 

@@ -9,10 +9,10 @@ import {PredictionHelpers} from "./PredictionHelpers.sol";
  * @title PredictionBetHelpers
  * @dev This contract extends PollHelpers, ProposalHelpers, and PredictionHelpers to manage prediction bets related to polls and proposals.
  * @notice This contract facilitates the storage and management of prediction bets made by users on proposals and predictions within polls.
- * @author @EllenLng, @KristofferGW
- * @notice Audited by @MashaVaverova
  */
 contract PredictionBetHelpers is PollHelpers, ProposalHelpers, PredictionHelpers {
+
+    // -------------------- STRUCTS --------------------
     /**
      * @dev Struct to represent a prediction bet placed by a user.
      * @param pollId The ID of the poll where the bet is placed.
@@ -29,6 +29,7 @@ contract PredictionBetHelpers is PollHelpers, ProposalHelpers, PredictionHelpers
         uint256 likelihood;
     }
 
+    // -------------------- STATE VARIABLES --------------------
     /// @notice Maps a poll ID to an array of PredictionBet structures representing all bets made in that poll.
     mapping(uint256 => mapping(uint256 => PredictionBet[])) public predictionBets;
 }

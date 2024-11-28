@@ -8,10 +8,10 @@ import {ProposalHelpers} from "./ProposalHelpers.sol";
  * @title PredictionHelpers
  * @dev This contract manages predictions related to proposals and polls, providing utility functions to ensure predictions exist and are valid.
  * @notice This contract is used to interact with predictions and validate their existence within specific proposals and polls.
- * @author @EllenLng, @KristofferGW
- * @notice Audited by @MashaVaverova
  */
 contract PredictionHelpers is PollHelpers, ProposalHelpers {
+    // -------------------- Structs --------------------
+
     /**
      * @dev Struct representing a prediction linked to a poll and proposal.
      * @param pollId The ID of the poll the prediction is linked to.
@@ -26,8 +26,12 @@ contract PredictionHelpers is PollHelpers, ProposalHelpers {
         string prediction;
     }
 
+    // -------------------- State Variables --------------------
+
     /// @notice Mapping from a proposal ID to an array of predictions related to that proposal.
     mapping(uint256 => Prediction[]) public predictions;
+
+    // -------------------- Internal Functions --------------------
 
     /**
      * @notice Ensures that the prediction exists for the given proposal.

@@ -2,12 +2,7 @@
 **Inherits:**
 [PollHelpers](/src/PollHelpers.sol/contract.PollHelpers.md), [ProposalHelpers](/src/ProposalHelpers.sol/contract.ProposalHelpers.md), [PredictionHelpers](/src/PredictionHelpers.sol/contract.PredictionHelpers.md), [PredictionBetHelpers](/src/PredictionBetHelpers.sol/contract.PredictionBetHelpers.md)
 
-**Author:**
-@EllenLng, @KristofferGW
-
 This contract allows users to place and retrieve prediction bets, ensuring that the poll, proposal, and prediction exist before placing bets.
-
-Audited by @MashaVaverova
 
 *This contract manages prediction bets placed by users on proposals within polls. It extends PollHelpers, ProposalHelpers, PredictionHelpers, and PredictionBetHelpers.*
 
@@ -34,7 +29,7 @@ modifier requireExist(uint256 _pollId, uint256 _proposalId, uint256 _predictionI
 
 Places a new prediction bet for a specific poll, proposal, and prediction.
 
-*The function ensures that the poll, proposal, and prediction exist, and the likelihood is greater than 0 before placing the bet.*
+*Ensures that the poll, proposal, and prediction exist, and the likelihood is greater than 0 before placing the bet.*
 
 
 ```solidity
@@ -50,7 +45,7 @@ function placePredictionBet(uint256 _pollId, uint256 _proposalId, uint256 _predi
 |`_proposalId`|`uint256`|The ID of the proposal associated with the bet.|
 |`_predictionId`|`uint256`|The ID of the prediction being bet on.|
 |`_likelihood`|`uint256`|The likelihood score given by the user for the prediction.|
-|`_bet`|`bool`|Boolean indicating whether the user is betting for or against the prediction.|
+|`_bet`|`bool`|Boolean indicating whether the user is betting for or against the prediction. Requirements: - `_likelihood` must be greater than zero. Emits: - `PredictionBetCreated`: Emitted with the prediction ID, bet direction, and likelihood score. Reverts: - `PB_InvalidLikelihood` if `_likelihood` is zero.|
 
 
 ### getPredictionBets
@@ -77,7 +72,7 @@ function getPredictionBets(uint256 _pollId, uint256 _proposalId, uint256 _predic
 
 |Name|Type|Description|
 |----|----|-----------|
-|`<none>`|`PredictionBet[]`|An array of PredictionBet structs representing all bets placed on the specified prediction.|
+|`<none>`|`PredictionBet[]`|An array of PredictionBet structs representing all bets placed on the specified prediction. Requirements: - The specified poll, proposal, and prediction must exist. - There must be bets placed on the prediction. Reverts: - If no bets are placed on the specified prediction.|
 
 
 ## Events

@@ -2,12 +2,7 @@
 **Inherits:**
 [PollHelpers](/src/PollHelpers.sol/contract.PollHelpers.md), [ProposalHelpers](/src/ProposalHelpers.sol/contract.ProposalHelpers.md)
 
-**Author:**
-@EllenLng, @KristofferGW
-
 This contract is used to interact with predictions and validate their existence within specific proposals and polls.
-
-Audited by @MashaVaverova
 
 *This contract manages predictions related to proposals and polls, providing utility functions to ensure predictions exist and are valid.*
 

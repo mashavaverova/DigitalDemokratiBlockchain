@@ -2,12 +2,7 @@
 **Inherits:**
 [PollHelpers](/src/PollHelpers.sol/contract.PollHelpers.md), [ProposalHelpers](/src/ProposalHelpers.sol/contract.ProposalHelpers.md), [PredictionHelpers](/src/PredictionHelpers.sol/contract.PredictionHelpers.md)
 
-**Author:**
-@EllenLng, @KristofferGW
-
 This contract facilitates the storage and management of prediction bets made by users on proposals and predictions within polls.
-
-Audited by @MashaVaverova
 
 *This contract extends PollHelpers, ProposalHelpers, and PredictionHelpers to manage prediction bets related to polls and proposals.*
 

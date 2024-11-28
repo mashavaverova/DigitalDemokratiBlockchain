@@ -2,46 +2,47 @@
 pragma solidity 0.8.18;
 
 import "lib/forge-std/src/console.sol";
+import {SharedErrors} from "./SharedErrors.sol";
 /**
  * @title RightToVote
  * @dev This contract manages voting group memberships, allowing users to join, leave, and check group memberships.
  * @notice This contract tracks users' memberships in various voting groups and provides the ability to manage membership.
- * @author @EllenLng, @KristofferGW
- * @notice Audited by @MashaVaverova
  */
 
-contract RightToVote {
-    /// Custom error definitions
-    error RTV_AlreadyMember(uint256 groupId);
-    error RTV_NotMember(uint256 groupId);
+contract RightToVote is SharedErrors {
+
+    // -------------------- Errors --------------------
     error RTV_GroupNotFound(uint256 groupId);
 
-    /// @dev Struct representing a voter and their membership in different groups.
+    // -------------------- Structs --------------------
     struct Voter {
         mapping(uint256 => bool) isMemberOfGroup;
         uint256[] memberGroups;
     }
 
-    /// @notice Maps an address to a Voter struct containing membership information.
+    // -------------------- State Variables --------------------
     mapping(address => Voter) private voters;
 
-    /// @notice Emitted when a user's group membership changes.
-    /// @param user The address of the user whose membership status changed.
-    /// @param group The ID of the group affected.
-    /// @param isMember True if the user joined the group, false if the user left the group.
+    // -------------------- Events --------------------
     event GroupMembershipChanged(address indexed user, uint256 indexed group, bool isMember);
 
-    /**
-     * @notice Allows a user to join a specific group.
-     * @dev Adds the group to the user's list of memberships and emits the GroupMembershipChanged event.
-     * @param _group The ID of the group the user wants to join.
+     /**
+     * @notice Allows a user to join a specified group.
+     * @dev Adds the group to the user's memberships and emits `GroupMembershipChanged`.
+     * @param _group The ID of the group the user wishes to join.
+     * 
+     * Requirements:
+     * - The user must not already be a member of the specified group.
+     *
+     * Emits:
+     * - `GroupMembershipChanged` event indicating the user joined the group.
      */
-    function becomeMemberOfGroup(uint256 _group) external {
+    function becomeMemberOfGroup(uint256 _group) public {
         console.log("becomeMemberOfGroup called by:", msg.sender);
         console.log("Is msg.sender already a member of group?", _group, voters[msg.sender].isMemberOfGroup[_group]);
 
         if (voters[msg.sender].isMemberOfGroup[_group]) {
-            revert RTV_AlreadyMember(_group);
+            revert SH_AlreadyMember(_group, msg.sender);
         }
 
         voters[msg.sender].isMemberOfGroup[_group] = true;
@@ -52,19 +53,23 @@ contract RightToVote {
     }
 
     /**
-     * @notice Allows a user to leave a specific group.
-     * @dev Removes the group from the user's list of memberships and emits the GroupMembershipChanged event.
-     * @param _group The ID of the group the user wants to leave.
+     * @notice Allows a user to leave a specified group.
+     * @dev Removes the group from the user's memberships and emits `GroupMembershipChanged`.
+     * @param _group The ID of the group the user wishes to leave.
+     * 
+     * Requirements:
+     * - The user must already be a member of the specified group.
+     *
+     * Emits:
+     * - `GroupMembershipChanged` event indicating the user left the group.
      */
     function removeGroupMembership(uint256 _group) external {
         if (!voters[msg.sender].isMemberOfGroup[_group]) {
-            revert RTV_NotMember(_group);
+            revert SH_NotMember(_group, msg.sender);
         }
-
         uint256 index;
         uint256 memberGroupsLength = voters[msg.sender].memberGroups.length;
         bool found = false;
-
         for (index = 0; index < memberGroupsLength; index++) {
             if (voters[msg.sender].memberGroups[index] == _group) {
                 found = true;
@@ -87,21 +92,21 @@ contract RightToVote {
     }
 
     /**
-     * @notice Checks if the user is a member of a specific group.
+     * @notice Checks if the caller is a member of a specified group.
      * @param _group The ID of the group to check.
-     * @return isMember True if the user is a member of the group, false otherwise.
+     * @return isMember `true` if the caller is a member of the group; otherwise, `false`.
      */
     function isUserMemberOfGroup(uint256 _group) public view returns (bool isMember) {
         return voters[msg.sender].isMemberOfGroup[_group];
     }
 
     /**
-     * @notice Checks if a specific address is a member of a specific group.
+     * @notice Checks if a specific address is a member of a specified group.
      * @param _user The address of the user to check.
      * @param _group The ID of the group to check.
-     * @return isMember True if the user is a member of the group, false otherwise.
+     * @return isMember `true` if the user is a member of the group; otherwise, `false`.
      */
-    function isAddressMemberOfGroup(address _user, uint256 _group) external view returns (bool isMember) {
+    function isAddressMemberOfGroup(address _user, uint256 _group) public view returns (bool isMember) {
         return voters[_user].isMemberOfGroup[_group];
     }
 

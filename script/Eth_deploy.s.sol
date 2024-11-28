@@ -3,12 +3,12 @@
 pragma solidity 0.8.18;
 
 import {Script} from "forge-std/Script.sol";
-import {Polls} from "../src/Polls.sol";
+import {PollsOnEthereum} from "../src/PollsOnEthereum.sol";
 
-contract DeployPolls is Script {
-    function run() external returns (Polls) {
+contract ETH_deploy is Script {
+    function run() external returns (PollsOnEthereum polls) {
         vm.startBroadcast();
-        Polls polls = new Polls();
+        polls = new PollsOnEthereum();
         vm.stopBroadcast();
         return polls;
     }
